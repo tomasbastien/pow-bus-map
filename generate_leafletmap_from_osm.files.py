@@ -125,7 +125,7 @@ def calculate_bounding_box(geojson):
     return min_lon, min_lat, max_lon, max_lat
 
 # Read relation IDs from file
-with open("lines", "r") as file:
+with open("./ressources/lines", "r") as file:
     relation_ids = [int(line.strip()) for line in file.readlines()]
 
 # Initialize variables for bounding box calculation
@@ -174,8 +174,8 @@ for feature in all_geojson_features:
             folium.GeoJson(feature, tooltip=feature['properties']['name'], style_function=style_lines).add_to(mymap)
 
 # Read points from destinations-hiver.json and add them to the map
-with open("destinations-hiver.json", "r") as dest_file:
-    points_data = json.load(dest_file)
+with open("./ressources/destinations-hiver.json", "r") as dest_file:
+    points_data = json.load(dest_file, strict=False)
     for point_feature in points_data['features']:
         point_properties = point_feature.get('properties', {})
         point_geometry = point_feature.get('geometry', {})
@@ -183,8 +183,8 @@ with open("destinations-hiver.json", "r") as dest_file:
             lon, lat = point_geometry['coordinates']
             name = point_properties.get('name', 'Unnamed Point')
             # Define the head color as a hexadecimal color code
-            head_color = '#faea5d'  # POW Yellow
-            #head_color = '#fea8db'  # POW Pink
+            #head_color = '#faea5d'  # POW Yellow
+            head_color = '#fea8db'  # POW Pink
             # Generate the SVG code with the dynamic head color
             pin_icon_html = f"""
             <div style="position: relative; width: 24px; height: 24px;">
@@ -211,7 +211,7 @@ with open("destinations-hiver.json", "r") as dest_file:
             ).add_to(mymap)
 
 # Add watermark
-url = ("logo-POW-Fr-bleu-2.png")
+url = ("./ressources/logo-POW-Fr-bleu-2.png")
 FloatImage(url, bottom=5, left=2, width='100px').add_to(mymap)
 
 
