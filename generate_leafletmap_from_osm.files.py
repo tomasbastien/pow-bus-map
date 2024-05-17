@@ -124,6 +124,12 @@ def calculate_bounding_box(geojson):
                         max_lat = max(max_lat, lat)
     return min_lon, min_lat, max_lon, max_lat
 
+def on_click_zoom_on_layer(e):
+    # Get the coordinates of the clicked point
+    lat, lon = e.latlng
+    # Re-center the map
+    m.panTo([lat, lon])
+
 # Read relation IDs from file
 with open("./ressources/lines", "r") as file:
     relation_ids = [int(line.strip()) for line in file.readlines()]
