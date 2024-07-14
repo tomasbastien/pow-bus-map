@@ -3,6 +3,8 @@ import folium
 from folium.plugins import FloatImage
 import json
 import math
+import os
+import geojson
 
 # Function to fetch GeoJSON data from Overpass API
 def fetch_overpass_data(relation_id):
@@ -130,6 +132,9 @@ def on_click_zoom_on_layer(e):
     # Re-center the map
     m.panTo([lat, lon])
 
+
+#### READ OSM IDs ####
+
 # Read relation IDs from file
 with open("./ressources/lines", "r") as file:
     relation_ids = [int(line.strip()) for line in file.readlines()]
@@ -148,6 +153,24 @@ for relation_id in relation_ids:
         # Convert OSM GeoJSON to GeoJSON compatible with Folium
         folium_geojson = osm_to_folium_geojson(osm_geojson, layer_name)
         all_geojson_features.extend(folium_geojson['features'])
+
+
+#### READ GEOJSON FILES #####
+
+directory_path = './ressources/geojson/'
+for filename in os.listdir(directory_path):
+    if filename.endswith(".geojson"):
+        file_path = os.path.join(directory_path, filename)
+        print("processing "+file_path)
+        # Open and load the GeoJSON file
+        with open(file_path, 'r') as geojson_file:
+            data = geojson.load(geojson_file)
+            
+            # Check if the GeoJSON contains 'features'
+            if 'features' in data:
+                all_geojson_features.extend(data['features'])
+
+# print(all_geojson_features)
 
 # Calculate the bounding box of all GeoJSON features
 min_lon, min_lat, max_lon, max_lat = calculate_bounding_box({'type': 'FeatureCollection', 'features': all_geojson_features})
@@ -174,10 +197,22 @@ for feature in all_geojson_features:
         folium.CircleMarker(location=[lat, lon], radius=2, color=border_color, fill=False, fill_color=fill_color, tooltip=feature['properties']['name']).add_to(mymap)
 
 
-for feature in all_geojson_features:
+# for feature in all_geojson_features:
     if feature['geometry']['type'] == 'LineString':
             style_lines = lambda x: {'color': '#003b5c'}
             folium.GeoJson(feature, tooltip=feature['properties']['name'], style_function=style_lines).add_to(mymap)
+
+    if feature['geometry']['type'] == 'MultiLineString':
+            style_lines = lambda x: {'color': '#003b5c'}
+            # print(feature['properties'])
+            if 'name' in feature['properties']:
+                folium.GeoJson(feature, tooltip=feature['properties']['name'], style_function=style_lines).add_to(mymap)
+            elif (('route_short_name' in feature['properties']) and ('route_long_name' in feature['properties'])):
+                folium.GeoJson(feature, tooltip=feature['properties']['route_short_name']+" - "+feature['properties']['route_long_name'], style_function=style_lines).add_to(mymap)
+
+
+
+#### DESTINATIONS ####
 
 # Read points from destinations-hiver.json and add them to the map
 with open("./ressources/destinations-hiver.json", "r") as dest_file:
