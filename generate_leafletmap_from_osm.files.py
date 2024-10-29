@@ -98,20 +98,34 @@ def calculate_bounding_box(geojson):
     for feature in geojson['features']:
         geometry = feature['geometry']
         if geometry['type'] == 'Point':
-            lon, lat = geometry['coordinates']
+            if len(geometry['coordinates']) == 3:
+                lon, lat, altitude = geometry['coordinates']
+            else:
+                lon, lat = geometry['coordinates']
+                altitude = None  # Altitude is absent
             min_lon = min(min_lon, lon)
             min_lat = min(min_lat, lat)
             max_lon = max(max_lon, lon)
             max_lat = max(max_lat, lat)
         elif geometry['type'] == 'LineString' or geometry['type'] == 'MultiPoint':
-            for lon, lat in geometry['coordinates']:
+            for coord in geometry['coordinates']:
+                if len(coord) == 3:
+                    lon, lat, altitude = coord
+                else:
+                    lon, lat = coord
+                    altitude = None  # Default to None if altitude is missing
                 min_lon = min(min_lon, lon)
                 min_lat = min(min_lat, lat)
                 max_lon = max(max_lon, lon)
                 max_lat = max(max_lat, lat)
         elif geometry['type'] == 'Polygon' or geometry['type'] == 'MultiLineString':
             for segment in geometry['coordinates']:
-                for lon, lat in segment:
+                for coord in segment:
+                    if len(coord) == 3:
+                        lon, lat, altitude = coord
+                    else:
+                        lon, lat = coord
+                        altitude = None  # Default to None if altitude is missing
                     min_lon = min(min_lon, lon)
                     min_lat = min(min_lat, lat)
                     max_lon = max(max_lon, lon)
@@ -119,7 +133,12 @@ def calculate_bounding_box(geojson):
         elif geometry['type'] == 'MultiPolygon':
             for polygon in geometry['coordinates']:
                 for segment in polygon:
-                    for lon, lat in segment:
+                    for coord in segment:
+                        if len(coord) == 3:
+                            lon, lat, altitude = coord
+                        else:
+                            lon, lat = coord
+                            altitude = None  # Default to None if altitude is missing
                         min_lon = min(min_lon, lon)
                         min_lat = min(min_lat, lat)
                         max_lon = max(max_lon, lon)
