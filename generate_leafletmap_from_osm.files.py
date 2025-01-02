@@ -163,6 +163,7 @@ all_geojson_features = []
 
 # Fetch and process GeoJSON data for each relation ID
 for relation_id in relation_ids:
+    print(relation_id)
     osm_geojson = fetch_overpass_data(relation_id)
     if osm_geojson:
         # Extract the name of the relation from its tags
@@ -194,9 +195,18 @@ for filename in os.listdir(directory_path):
 # Calculate the bounding box of all GeoJSON features
 min_lon, min_lat, max_lon, max_lat = calculate_bounding_box({'type': 'FeatureCollection', 'features': all_geojson_features})
 
+print(min_lon)
+print(max_lon)
+print(min_lat)
+print(max_lat)
+
+
 # Calculate the center of the bounding box
 center_lon = (min_lon + max_lon) / 2
 center_lat = (min_lat + max_lat) / 2
+
+print(center_lon)
+print(center_lat)
 
 # Calculate the zoom level based on the bounding box dimensions
 delta_lon = max_lon - min_lon
@@ -204,8 +214,10 @@ delta_lat = max_lat - min_lat
 max_delta = max(delta_lon, delta_lat)
 zoom_level = math.floor(8 - math.log(max_delta, 2))
 
+print(zoom_level)
+
 # Create a folium map centered on the calculated center
-mymap = folium.Map(location=[center_lat, center_lon], zoom_start=8)
+mymap = folium.Map(location=[center_lat, center_lon], zoom_start=7)
 
 # Add all GeoJSON features to the map with tooltips
 for feature in all_geojson_features:
