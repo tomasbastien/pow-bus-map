@@ -5,6 +5,7 @@ import json
 import math
 import os
 import geojson
+import time
 
 # Function to fetch GeoJSON data from Overpass API
 def fetch_overpass_data(relation_id):
@@ -14,6 +15,7 @@ def fetch_overpass_data(relation_id):
         "out geom;"
     )
     overpass_url = "http://overpass-api.de/api/interpreter"
+    time.sleep(2.5)
     response = requests.get(overpass_url, params={"data": overpass_query})
     if response.status_code == 200:
         return response.json()
@@ -151,28 +153,27 @@ def on_click_zoom_on_layer(e):
     # Re-center the map
     m.panTo([lat, lon])
 
-
-#### READ OSM IDs ####
-
-# Read relation IDs from file
-with open("./ressources/lines", "r") as file:
-    relation_ids = [int(line.strip()) for line in file.readlines()]
-
 # Initialize variables for bounding box calculation
 all_geojson_features = []
 
-# Fetch and process GeoJSON data for each relation ID
-for relation_id in relation_ids:
-    print(relation_id)
-    osm_geojson = fetch_overpass_data(relation_id)
-    if osm_geojson:
-        # Extract the name of the relation from its tags
-        relation_tags = osm_geojson['elements'][0].get('tags', {})
-        layer_name = relation_tags.get('name', f"Unnamed Layer {relation_id}")
+# #### READ OSM IDs ####
 
-        # Convert OSM GeoJSON to GeoJSON compatible with Folium
-        folium_geojson = osm_to_folium_geojson(osm_geojson, layer_name)
-        all_geojson_features.extend(folium_geojson['features'])
+# # Read relation IDs from file
+# with open("./ressources/lines", "r") as file:
+#     relation_ids = [int(line.strip()) for line in file.readlines()]
+
+# # Fetch and process GeoJSON data for each relation ID
+# for relation_id in relation_ids:
+#     print(relation_id)
+#     osm_geojson = fetch_overpass_data(relation_id)
+#     if osm_geojson:
+#         # Extract the name of the relation from its tags
+#         relation_tags = osm_geojson['elements'][0].get('tags', {})
+#         layer_name = relation_tags.get('name', f"Unnamed Layer {relation_id}")
+
+#         # Convert OSM GeoJSON to GeoJSON compatible with Folium
+#         folium_geojson = osm_to_folium_geojson(osm_geojson, layer_name)
+#         all_geojson_features.extend(folium_geojson['features'])
 
 
 #### READ GEOJSON FILES #####
@@ -282,8 +283,64 @@ with open("./ressources/destinations-hiver.json", "r") as dest_file:
                 icon=custom_icon
             ).add_to(mymap)
 
+# ##### FLOCON VERT #####
+
+# with open("./ressources/stations_flocon_vert.json", "r") as dest_file:
+#     points_data = json.load(dest_file, strict=False)
+#     for point_feature in points_data['features']:
+#         point_properties = point_feature.get('properties', {})
+#         point_geometry = point_feature.get('geometry', {})
+#         if point_geometry['type'] == 'Point':
+#             lon, lat = point_geometry['coordinates']
+#             name = point_properties.get('name', 'Unnamed Point')
+#             icon = folium.CustomIcon(
+#                 icon_image="./ressources/logo-fv.jpg",  # path to your PNG file
+#                 icon_size=(20, 24),        # size of the icon (width, height)
+#                 icon_anchor=(10, 10)       # anchor point, so the tip is correctly placed
+#             )
+#             # color = point_properties.get('marker-color', 'blue')
+#             # icon = folium.Icon(color=color, icon='snowflake', prefix='fa', icon_color='white')
+#             # folium.Marker(location=[lat, lon], tooltip=name, icon=icon).add_to(mymap)
+#             folium.Marker(
+#                 location=[lat, lon],
+#                 tooltip=name,
+#                 icon=icon
+#             ).add_to(mymap)
+
+
+##### GARES #####
+
+with open("./ressources/gares.geojson", "r") as dest_file:
+    points_data = json.load(dest_file, strict=False)
+    for point_feature in points_data['features']:
+        point_properties = point_feature.get('properties', {})
+        point_geometry = point_feature.get('geometry', {})
+        if point_geometry['type'] == 'Point':
+            lon, lat = point_geometry['coordinates']
+            name = point_properties.get('name', 'Unnamed Point')
+            icon = folium.CustomIcon(
+                icon_image="./ressources/train-icon.png",  # path to your PNG file
+                icon_size=(25, 25),        # size of the icon (width, height)
+                icon_anchor=(10, 10)       # anchor point, so the tip is correctly placed
+            )
+            # color = point_properties.get('marker-color', 'blue')
+            # icon = folium.Icon(color=color, icon='snowflake', prefix='fa', icon_color='white')
+            # folium.Marker(location=[lat, lon], tooltip=name, icon=icon).add_to(mymap)
+            folium.Marker(
+                location=[lat, lon],
+                tooltip=name,
+                icon=icon
+            ).add_to(mymap)
+
+###### TRAIN LINES #####
+# Open and load the GeoJSON file
+with open("./ressources/alpes_nord_railways.geojson", 'r') as railways_file:
+    data = geojson.load(railways_file)
+    style_lines = lambda x: {'color': '#0268ff'}
+    folium.GeoJson(data, style_function=style_lines).add_to(mymap)
+          
 # Add watermark
-url = ("./ressources/logo-POW-Fr-bleu-2.png")
+url = ("./ressources/FR_Hero-Logo.png")
 FloatImage(url, bottom=5, left=2, width='100px').add_to(mymap)
 
 
