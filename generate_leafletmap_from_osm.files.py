@@ -164,6 +164,7 @@ with open("./ressources/lines", "r") as file:
 
 # Fetch and process GeoJSON data for each relation ID
 for relation_id in relation_ids:
+    retry_count=0
     print(relation_id)
     osm_geojson = fetch_overpass_data(relation_id)
     if osm_geojson:
@@ -174,6 +175,7 @@ for relation_id in relation_ids:
         # Convert OSM GeoJSON to GeoJSON compatible with Folium
         folium_geojson = osm_to_folium_geojson(osm_geojson, layer_name)
         all_geojson_features.extend(folium_geojson['features'])
+
 
 
 #### READ GEOJSON FILES #####
@@ -247,7 +249,7 @@ for feature in all_geojson_features:
 #### DESTINATIONS ####
 
 # Read points from destinations-hiver.json and add them to the map
-with open("./ressources/destinations-hiver.geojson", "r") as dest_file:
+with open("./ressources/destinations_hiver.geojson", "r") as dest_file:
     points_data = json.load(dest_file, strict=False)
     for point_feature in points_data['features']:
         point_properties = point_feature.get('properties', {})
