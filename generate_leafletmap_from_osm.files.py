@@ -156,24 +156,24 @@ def on_click_zoom_on_layer(e):
 # Initialize variables for bounding box calculation
 all_geojson_features = []
 
-#### READ OSM IDs ####
+# #### READ OSM IDs ####
 
-# Read relation IDs from file
-with open("./ressources/lines", "r") as file:
-    relation_ids = [int(line.strip()) for line in file.readlines()]
+# # Read relation IDs from file
+# with open("./ressources/lines", "r") as file:
+#     relation_ids = [int(line.strip()) for line in file.readlines()]
 
-# Fetch and process GeoJSON data for each relation ID
-for relation_id in relation_ids:
-    print(relation_id)
-    osm_geojson = fetch_overpass_data(relation_id)
-    if osm_geojson:
-        # Extract the name of the relation from its tags
-        relation_tags = osm_geojson['elements'][0].get('tags', {})
-        layer_name = relation_tags.get('name', f"Unnamed Layer {relation_id}")
+# # Fetch and process GeoJSON data for each relation ID
+# for relation_id in relation_ids:
+#     print(relation_id)
+#     osm_geojson = fetch_overpass_data(relation_id)
+#     if osm_geojson:
+#         # Extract the name of the relation from its tags
+#         relation_tags = osm_geojson['elements'][0].get('tags', {})
+#         layer_name = relation_tags.get('name', f"Unnamed Layer {relation_id}")
 
-        # Convert OSM GeoJSON to GeoJSON compatible with Folium
-        folium_geojson = osm_to_folium_geojson(osm_geojson, layer_name)
-        all_geojson_features.extend(folium_geojson['features'])
+#         # Convert OSM GeoJSON to GeoJSON compatible with Folium
+#         folium_geojson = osm_to_folium_geojson(osm_geojson, layer_name)
+#         all_geojson_features.extend(folium_geojson['features'])
 
 
 #### READ GEOJSON FILES #####
@@ -333,8 +333,16 @@ with open("./ressources/gares.geojson", "r") as dest_file:
             ).add_to(mymap)
 
 ###### TRAIN LINES #####
+# ALPES NORD
 # Open and load the GeoJSON file
 with open("./ressources/alpes_nord_railways.geojson", 'r') as railways_file:
+    data = geojson.load(railways_file)
+    style_lines = lambda x: {'color': '#0268ff'}
+    folium.GeoJson(data, style_function=style_lines).add_to(mymap)
+
+# ALPES SUD
+# Open and load the GeoJSON file
+with open("./ressources/alpes_sud_railways.geojson", 'r') as railways_file:
     data = geojson.load(railways_file)
     style_lines = lambda x: {'color': '#0268ff'}
     folium.GeoJson(data, style_function=style_lines).add_to(mymap)
