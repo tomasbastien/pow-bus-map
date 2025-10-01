@@ -15,7 +15,7 @@ def fetch_overpass_data(relation_id):
         "out geom;"
     )
     overpass_url = "http://overpass-api.de/api/interpreter"
-    time.sleep(2.5)
+    time.sleep(2)
     response = requests.get(overpass_url, params={"data": overpass_query})
     if response.status_code == 200:
         return response.json()
@@ -162,20 +162,49 @@ all_geojson_features = []
 with open("./ressources/lines", "r") as file:
     relation_ids = [int(line.strip()) for line in file.readlines()]
 
-# Fetch and process GeoJSON data for each relation ID
-for relation_id in relation_ids:
-    retry_count=0
-    print(relation_id)
-    osm_geojson = fetch_overpass_data(relation_id)
-    if osm_geojson:
-        # Extract the name of the relation from its tags
-        relation_tags = osm_geojson['elements'][0].get('tags', {})
-        layer_name = relation_tags.get('name', f"Unnamed Layer {relation_id}")
+# # Fetch and process GeoJSON data for each relation ID
+# for relation_id in relation_ids:
+#     retry_count=0
+#     print(relation_id)
+#     osm_geojson = fetch_overpass_data(relation_id)
+#     if osm_geojson:
+#         # Extract the name of the relation from its tags
+#         relation_tags = osm_geojson['elements'][0].get('tags', {})
+#         layer_name = relation_tags.get('name', f"Unnamed Layer {relation_id}")
 
-        # Convert OSM GeoJSON to GeoJSON compatible with Folium
-        folium_geojson = osm_to_folium_geojson(osm_geojson, layer_name)
-        all_geojson_features.extend(folium_geojson['features'])
+#         # Convert OSM GeoJSON to GeoJSON compatible with Folium
+#         folium_geojson = osm_to_folium_geojson(osm_geojson, layer_name)
+#         all_geojson_features.extend(folium_geojson['features'])
 
+max_retries = 5
+attempt = 1
+pending_relations = relation_ids[:]  # copy full list
+
+while attempt <= max_retries and pending_relations:
+    print(f"\n--- Attempt {attempt} ---")
+    next_pending = []
+
+    for relation_id in pending_relations:
+        print(f"Fetching relation {relation_id}...")
+        osm_geojson = fetch_overpass_data(relation_id)
+
+        if osm_geojson:
+            # Extract the name of the relation from its tags
+            relation_tags = osm_geojson['elements'][0].get('tags', {})
+            layer_name = relation_tags.get('name', f"Unnamed Layer {relation_id}")
+
+            # Convert OSM GeoJSON to GeoJSON compatible with Folium
+            folium_geojson = osm_to_folium_geojson(osm_geojson, layer_name)
+            all_geojson_features.extend(folium_geojson['features'])
+        else:
+            print(f"Relation {relation_id} failed, will retry later.")
+            next_pending.append(relation_id)
+
+    pending_relations = next_pending
+    attempt += 1
+
+if pending_relations:
+    print(f"\nFailed to fetch after {max_retries} attempts: {pending_relations}")
 
 
 #### READ GEOJSON FILES #####
