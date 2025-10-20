@@ -153,6 +153,10 @@ def on_click_zoom_on_layer(e):
     # Re-center the map
     m.panTo([lat, lon])
 
+
+#### MAIN ###
+
+
 # Initialize variables for bounding box calculation
 all_geojson_features = []
 
@@ -161,20 +165,6 @@ all_geojson_features = []
 # Read relation IDs from file
 with open("./ressources/lines", "r") as file:
     relation_ids = [int(line.strip()) for line in file.readlines()]
-
-# # Fetch and process GeoJSON data for each relation ID
-# for relation_id in relation_ids:
-#     retry_count=0
-#     print(relation_id)
-#     osm_geojson = fetch_overpass_data(relation_id)
-#     if osm_geojson:
-#         # Extract the name of the relation from its tags
-#         relation_tags = osm_geojson['elements'][0].get('tags', {})
-#         layer_name = relation_tags.get('name', f"Unnamed Layer {relation_id}")
-
-#         # Convert OSM GeoJSON to GeoJSON compatible with Folium
-#         folium_geojson = osm_to_folium_geojson(osm_geojson, layer_name)
-#         all_geojson_features.extend(folium_geojson['features'])
 
 max_retries = 5
 attempt = 1
@@ -412,6 +402,29 @@ with open("./ressources/auvergne_railways.geojson", 'r') as railways_file:
     data = geojson.load(railways_file)
     style_lines = lambda x: {'color': '#0268ff'}
     folium.GeoJson(data, style_function=style_lines).add_to(mymap)  
+
+
+# Add legend
+legend_html = '''
+<div style="position: fixed; 
+     top: 40px; right: 20px; width: 225px; height: 115px; 
+     border:2px solid grey; z-index:9999; font-size:14px;
+     background-color:white; opacity: 0.85;">
+     &nbsp;<b>Légende :</b><br>
+     &nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <!-- Pin head (circle) -->
+                <circle cx="12" cy="6" r="5" fill="#fea8db" />
+                <!-- Pin body (line) -->
+                <path d="M12 11v10" />
+              </svg>&nbsp;Destinations
+            <br>
+     &nbsp;<img src="./ressources/train-icon.png" width="24" height="24"/>&nbsp;Gares avec correspondances<br>
+     &nbsp; <img style="filter: invert(34%) sepia(80%) saturate(5493%) hue-rotate(211deg) brightness(101%) contrast(102%);" src="./ressources/segment.svg" width="20"/>&nbsp;Lignes de train<br>
+     &nbsp; <img style="filter: invert(16%) sepia(20%) saturate(5626%) hue-rotate(177deg) brightness(97%) contrast(102%);" src="./ressources/segment.svg" width="20"/>&nbsp;Lignes de bus<br>
+</div>
+'''
+mymap.get_root().html.add_child(folium.Element(legend_html))
+
           
 # Add watermark
 url = ("./ressources/FR_Hero-Logo.png")
