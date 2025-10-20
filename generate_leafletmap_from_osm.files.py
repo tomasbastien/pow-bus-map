@@ -419,8 +419,8 @@ legend_html = '''
               </svg>&nbsp;Destinations
             <br>
      &nbsp;<img src="./ressources/train-icon.png" width="24" height="24"/>&nbsp;Gares avec correspondances<br>
-     &nbsp; <img style="filter: invert(34%) sepia(80%) saturate(5493%) hue-rotate(211deg) brightness(101%) contrast(102%);" src="./ressources/segment.svg" width="20"/>&nbsp;Lignes de train<br>
-     &nbsp; <img style="filter: invert(16%) sepia(20%) saturate(5626%) hue-rotate(177deg) brightness(97%) contrast(102%);" src="./ressources/segment.svg" width="20"/>&nbsp;Lignes de bus<br>
+     &nbsp;<img style="filter: invert(34%) sepia(80%) saturate(5493%) hue-rotate(211deg) brightness(101%) contrast(102%);" src="./ressources/segment.svg" width="20"/>&nbsp;Lignes de train<br>
+     &nbsp;<img style="filter: invert(16%) sepia(20%) saturate(5626%) hue-rotate(177deg) brightness(97%) contrast(102%);" src="./ressources/segment.svg" width="20"/>&nbsp;Lignes de bus<br>
 </div>
 '''
 mymap.get_root().html.add_child(folium.Element(legend_html))
