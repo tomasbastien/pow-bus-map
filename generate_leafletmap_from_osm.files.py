@@ -1,6 +1,7 @@
 import requests
 import folium
 from folium.plugins import FloatImage
+from folium.plugins import Geocoder
 import json
 import math
 import os
@@ -430,6 +431,8 @@ mymap.get_root().html.add_child(folium.Element(legend_html))
 url = ("./ressources/FR_Hero-Logo.png")
 FloatImage(url, bottom=5, left=2, width='100px').add_to(mymap)
 
+# Add geosearch bar
+Geocoder(collapsed=True, add_marker=True, position="topleft").add_to(mymap)
 
 # Save the map to an HTML file
 output_map_file = "leaflet_map.html"
