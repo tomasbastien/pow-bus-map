@@ -181,12 +181,15 @@ while attempt <= max_retries and pending_relations:
 
         if osm_geojson:
             # Extract the name of the relation from its tags
-            relation_tags = osm_geojson['elements'][0].get('tags', {})
-            layer_name = relation_tags.get('name', f"Unnamed Layer {relation_id}")
+            if osm_geojson['elements'] != []:
+                relation_tags = osm_geojson['elements'][0].get('tags', {})
+                layer_name = relation_tags.get('name', f"Unnamed Layer {relation_id}")
 
-            # Convert OSM GeoJSON to GeoJSON compatible with Folium
-            folium_geojson = osm_to_folium_geojson(osm_geojson, layer_name)
-            all_geojson_features.extend(folium_geojson['features'])
+                # Convert OSM GeoJSON to GeoJSON compatible with Folium
+                folium_geojson = osm_to_folium_geojson(osm_geojson, layer_name)
+                all_geojson_features.extend(folium_geojson['features'])
+            else:
+                print(f"/!\\ Relation {relation_id} is empty/!\\")
         else:
             print(f"Relation {relation_id} failed, will retry later.")
             next_pending.append(relation_id)
