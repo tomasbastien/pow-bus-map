@@ -189,7 +189,7 @@ while attempt <= max_retries and pending_relations:
                 folium_geojson = osm_to_folium_geojson(osm_geojson, layer_name)
                 all_geojson_features.extend(folium_geojson['features'])
             else:
-                print(f"/!\\ Relation {relation_id} is empty/!\\")
+                print(f"/!\\ Relation {relation_id} is empty /!\\")
         else:
             print(f"Relation {relation_id} failed, will retry later.")
             next_pending.append(relation_id)
