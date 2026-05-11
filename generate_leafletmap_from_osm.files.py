@@ -260,14 +260,16 @@ for feature in all_geojson_features:
 # for feature in all_geojson_features:
     if feature['geometry']['type'] == 'LineString':
             style_lines = lambda x: {'color': '#003b5c'}
+            #print(feature['properties'])
             folium.GeoJson(feature, tooltip=feature['properties']['name'], style_function=style_lines).add_to(mymap)
 
     if feature['geometry']['type'] == 'MultiLineString':
             style_lines = lambda x: {'color': '#003b5c'}
-            # print(feature['properties'])
             if 'name' in feature['properties']:
+                #print("adding "+feature['properties']['name'])
                 folium.GeoJson(feature, tooltip=feature['properties']['name'], style_function=style_lines).add_to(mymap)
             elif (('route_short_name' in feature['properties']) and ('route_long_name' in feature['properties'])):
+                #print("adding "+feature['properties']['route_short_name']+" - "+feature['properties']['route_long_name'])
                 folium.GeoJson(feature, tooltip=feature['properties']['route_short_name']+" - "+feature['properties']['route_long_name'], style_function=style_lines).add_to(mymap)
 
 
