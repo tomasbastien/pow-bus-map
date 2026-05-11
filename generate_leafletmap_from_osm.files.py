@@ -15,9 +15,12 @@ def fetch_overpass_data(relation_id):
         f"relation({relation_id});"
         "out geom;"
     )
+    headers = {
+        "User-Agent": "POW-bus-map (contact: sedeplacer@protectourwinters.fr)"
+    }
     overpass_url = "http://overpass-api.de/api/interpreter"
     time.sleep(2)
-    response = requests.get(overpass_url, params={"data": overpass_query})
+    response = requests.get(overpass_url, params={"data": overpass_query}, headers=headers)
     if response.status_code == 200:
         return response.json()
     else:
