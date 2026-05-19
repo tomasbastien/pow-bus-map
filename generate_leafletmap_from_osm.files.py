@@ -7,6 +7,8 @@ import math
 import os
 import geojson
 import time
+from folium import Element
+
 
 # Function to fetch GeoJSON data from Overpass API
 def fetch_overpass_data(relation_id):
@@ -164,7 +166,9 @@ def on_click_zoom_on_layer(e):
 # Initialize variables for bounding box calculation
 all_geojson_features = []
 
-#### READ OSM IDs ####
+#### READ OSM IDs #### 
+
+#UNCOMMENT WHEN IN PRODUCTION FOR FRESH DATA QUERYING
 
 # Read relation IDs from file
 with open("./ressources/lines", "r") as file:
@@ -191,6 +195,9 @@ while attempt <= max_retries and pending_relations:
                 # Convert OSM GeoJSON to GeoJSON compatible with Folium
                 folium_geojson = osm_to_folium_geojson(osm_geojson, layer_name)
                 all_geojson_features.extend(folium_geojson['features'])
+                #### FOR DEV PURPOSE, LOCAL SAVE OSM RELATIONS
+                #save_geojson(folium_geojson, "./ressources/dev_geojson/"+layer_name+".geojson")
+
             else:
                 print(f"/!\\ Relation {relation_id} is empty /!\\")
         else:
@@ -205,6 +212,24 @@ if pending_relations:
 
 
 #### READ GEOJSON FILES #####
+
+
+### LOCAL OSM SOURCES WHEN DEV USAGE ###
+
+# directory_path = './ressources/dev_geojson/'
+# for filename in os.listdir(directory_path):
+#     if filename.endswith(".geojson"):
+#         file_path = os.path.join(directory_path, filename)
+#         print("processing "+file_path)
+#         # Open and load the GeoJSON file
+#         with open(file_path, 'r') as geojson_file:
+#             data = geojson.load(geojson_file)
+            
+#             # Check if the GeoJSON contains 'features'
+#             if 'features' in data:
+#                 all_geojson_features.extend(data['features'])
+
+#######################################
 
 directory_path = './ressources/geojson/'
 for filename in os.listdir(directory_path):
@@ -243,34 +268,222 @@ delta_lat = max_lat - min_lat
 max_delta = max(delta_lon, delta_lat)
 zoom_level = math.floor(8 - math.log(max_delta, 2))
 
-print(zoom_level)
+print("Zoom level : "+str(zoom_level))
 
 # Create a folium map centered on the calculated center
-mymap = folium.Map(location=[center_lat, center_lon], zoom_start=7)
+mymap = folium.Map(location=[center_lat, center_lon], zoom_start=7, prefer_canvas=True, tiles=None)
 
-# Add all GeoJSON features to the map with tooltips
+
+### MAP IGN AND OSM TILES LAYERS
+
+folium.TileLayer(
+    tiles=(
+        "https://data.geopf.fr/wmts?"
+        "SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0"
+        "&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2"
+        "&STYLE=normal"
+        "&TILEMATRIXSET=PM"
+        "&FORMAT=image/png"
+        "&TILEMATRIX={z}"
+        "&TILEROW={y}"
+        "&TILECOL={x}"
+    ),
+    attr="IGN-F/Géoportail",
+    name="IGN Plan",
+    overlay=False,
+    opacity=0.8,
+    control=True,
+    max_zoom=19,
+    show=False
+).add_to(mymap)
+
+
+folium.TileLayer(
+    tiles=(
+        "https://data.geopf.fr/wmts?"
+        "SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0"
+        "&LAYER=ORTHOIMAGERY.ORTHOPHOTOS"
+        "&STYLE=normal"
+        "&TILEMATRIXSET=PM"
+        "&FORMAT=image/jpeg"
+        "&TILEMATRIX={z}"
+        "&TILEROW={y}"
+        "&TILECOL={x}"
+    ),
+    attr="IGN-F/Géoportail",
+    name="IGN Orthophotos",
+    overlay=False,
+    control=True,
+    max_zoom=19,
+    show=False
+).add_to(mymap)
+
+folium.TileLayer(
+    tiles=(
+        "https://data.geopf.fr/private/wmts?"
+        "apikey=ign_scan_ws&REQUEST=GetTile&VERSION=1.0.0&SERVICE=WMTS"
+        "&LAYER=GEOGRAPHICALGRIDSYSTEMS.MAPS"
+        "&STYLE=normal"
+        "&TILEMATRIXSET=PM"
+        "&FORMAT=image/jpeg"
+        "&TILEMATRIX={z}"
+        "&TILEROW={y}"
+        "&TILECOL={x}"
+    ),
+    attr="IGN-F/Géoportail",
+    name="IGN TOP25",
+    overlay=False,
+    opacity=0.8,
+    control=True,
+    max_zoom=18,
+    show=False
+).add_to(mymap)
+
+folium.TileLayer(
+    tiles="OpenStreetMap",
+    name="OpenStreetMap",
+    control=True,
+    show=True
+).add_to(mymap)
+
+
+### DATA TO DISPLAY
+
+point_features = []
+line_features = []
+
 for feature in all_geojson_features:
-    if feature['geometry']['type'] == 'Point':
-        lon, lat = feature['geometry']['coordinates']
-        fill_color = '#003b5c'  # Custom fill color using hexadecimal color code (e.g., orange)
-        border_color = '#003b5c'  # Custom fill color using hexadecimal color code (e.g., orange)
-        folium.CircleMarker(location=[lat, lon], radius=2, color=border_color, fill=False, fill_color=fill_color, tooltip=feature['properties']['name']).add_to(mymap)
+
+    props = feature.get("properties", {})
+
+    # Build tooltip text
+    tooltip_text = None
+
+    if "name" in props:
+        tooltip_text = props["name"]
+
+    elif (
+        "route_short_name" in props and
+        "route_long_name" in props
+    ):
+        tooltip_text = (
+            f"{props['route_short_name']} - "
+            f"{props['route_long_name']}"
+        )
+
+    # Store normalized tooltip
+    props["tooltip"] = tooltip_text
+
+    geom_type = feature["geometry"]["type"]
+
+    if geom_type == "Point":
+        point_features.append(feature)
+
+    elif geom_type in ["LineString", "MultiLineString"]:
+        line_features.append(feature)
+
+# ---------------------------------------------------
+# LINES
+# ---------------------------------------------------
+
+# lines = folium.GeoJson(
+#     {
+#         "type": "FeatureCollection",
+#         "features": line_features
+#     },
+#     style_function=lambda x: {
+#         "color": "#003b5c",
+#         "weight": 8
+#             },
+#     tooltip=folium.GeoJsonTooltip(
+#         fields=["tooltip"],
+#         labels=False
+#     ),
+#     control=False
+# ).add_to(mymap)
+
+lines = folium.GeoJson(
+    {
+        "type": "FeatureCollection",
+        "features": line_features
+    },
+    style_function=lambda x: {
+        "color": "#003b5c",
+        "weight": 4
+            },
+    tooltip=folium.GeoJsonTooltip(
+        fields=["tooltip"],
+        labels=False
+    ),
+    control=False
+).add_to(mymap)
+
+# ---------------------------------------------------
+# POINTS
+# ---------------------------------------------------
+
+points = folium.GeoJson(
+    {
+        "type": "FeatureCollection",
+        "features": point_features
+    },
+    marker=folium.CircleMarker(
+        radius=5,
+        color="#fea8db",
+        fill=True,
+        fill_color="#fea8db",
+        fill_opacity=1,
+        weight=0
+    ),
+    tooltip=folium.GeoJsonTooltip(
+        fields=["tooltip"],
+        labels=False
+    ),
+    control=False)
+points.add_to(mymap)
 
 
+## V2 opti
+
+# geojson_data = {
+#     "type": "FeatureCollection",
+#     "features": all_geojson_features
+# }
+
+# folium.GeoJson(
+#     geojson_data,
+#     tooltip=folium.GeoJsonTooltip(fields=["name"]),
+#     style_function=lambda x: {
+#         "color": "#003b5c",
+#         "weight": 2
+#     }
+# ).add_to(mymap)
+
+# V1 historique
+
+# # Add all GeoJSON features to the map with tooltips
 # for feature in all_geojson_features:
-    if feature['geometry']['type'] == 'LineString':
-            style_lines = lambda x: {'color': '#003b5c'}
-            #print(feature['properties'])
-            folium.GeoJson(feature, tooltip=feature['properties']['name'], style_function=style_lines).add_to(mymap)
+#     if feature['geometry']['type'] == 'Point':
+#         lon, lat = feature['geometry']['coordinates']
+#         fill_color = '#003b5c'  # Custom fill color using hexadecimal color code (e.g., orange)
+#         border_color = '#003b5c'  # Custom fill color using hexadecimal color code (e.g., orange)
+#         folium.CircleMarker(location=[lat, lon], radius=2, color=border_color, fill=False, fill_color=fill_color, tooltip=feature['properties']['name']).add_to(mymap)
 
-    if feature['geometry']['type'] == 'MultiLineString':
-            style_lines = lambda x: {'color': '#003b5c'}
-            if 'name' in feature['properties']:
-                #print("adding "+feature['properties']['name'])
-                folium.GeoJson(feature, tooltip=feature['properties']['name'], style_function=style_lines).add_to(mymap)
-            elif (('route_short_name' in feature['properties']) and ('route_long_name' in feature['properties'])):
-                #print("adding "+feature['properties']['route_short_name']+" - "+feature['properties']['route_long_name'])
-                folium.GeoJson(feature, tooltip=feature['properties']['route_short_name']+" - "+feature['properties']['route_long_name'], style_function=style_lines).add_to(mymap)
+
+# # for feature in all_geojson_features:
+#     if feature['geometry']['type'] == 'LineString':
+#             style_lines = lambda x: {'color': '#003b5c'}
+#             #print(feature['properties'])
+#             folium.GeoJson(feature, tooltip=feature['properties']['name'], style_function=style_lines).add_to(mymap)
+
+#     if feature['geometry']['type'] == 'MultiLineString':
+#             style_lines = lambda x: {'color': '#003b5c'}
+#             if 'name' in feature['properties']:
+#                 #print("adding "+feature['properties']['name'])
+#                 folium.GeoJson(feature, tooltip=feature['properties']['name'], style_function=style_lines).add_to(mymap)
+#             elif (('route_short_name' in feature['properties']) and ('route_long_name' in feature['properties'])):
+#                 #print("adding "+feature['properties']['route_short_name']+" - "+feature['properties']['route_long_name'])
+#                 folium.GeoJson(feature, tooltip=feature['properties']['route_short_name']+" - "+feature['properties']['route_long_name'], style_function=style_lines).add_to(mymap)
 
 
 
@@ -367,29 +580,38 @@ with open("./ressources/gares.geojson", "r") as dest_file:
 # Open and load the GeoJSON file
 with open("./ressources/alpes_nord_railways.geojson", 'r') as railways_file:
     data = geojson.load(railways_file)
-    style_lines = lambda x: {'color': '#0268ff'}
-    folium.GeoJson(data, style_function=style_lines).add_to(mymap)
+    # style_lines = lambda x: {'color': '#fff', 'weight':'8'}
+    # folium.GeoJson(data, style_function=style_lines,control=False).add_to(mymap)  
+    style_lines = lambda x: {'color': '#0268ff', 'weight':'4'}
+    folium.GeoJson(data, style_function=style_lines,control=False).add_to(mymap)  
 
 # ALPES SUD
 # Open and load the GeoJSON file
 with open("./ressources/alpes_sud_railways.geojson", 'r') as railways_file:
     data = geojson.load(railways_file)
-    style_lines = lambda x: {'color': '#0268ff'}
-    folium.GeoJson(data, style_function=style_lines).add_to(mymap)
+    # style_lines = lambda x: {'color': '#fff', 'weight':'8'}
+    # folium.GeoJson(data, style_function=style_lines,control=False).add_to(mymap)  
+    style_lines = lambda x: {'color': '#0268ff', 'weight':'4'}
+    folium.GeoJson(data, style_function=style_lines,control=False).add_to(mymap)  
 
 # PYRENEES OUEST
 # Open and load the GeoJSON file
 with open("./ressources/pyrenees_ouest_railways.geojson", 'r') as railways_file:
     data = geojson.load(railways_file)
-    style_lines = lambda x: {'color': '#0268ff'}
-    folium.GeoJson(data, style_function=style_lines).add_to(mymap)   
+    # style_lines = lambda x: {'color': '#fff', 'weight':'8'}
+    # folium.GeoJson(data, style_function=style_lines,control=False).add_to(mymap)  
+    style_lines = lambda x: {'color': '#0268ff', 'weight':'4'}
+    folium.GeoJson(data, style_function=style_lines,control=False).add_to(mymap)  
+  
 
 # PYRENEES EST
 # Open and load the GeoJSON file
 with open("./ressources/pyrenees_est_railways.geojson", 'r') as railways_file:
     data = geojson.load(railways_file)
-    style_lines = lambda x: {'color': '#0268ff'}
-    folium.GeoJson(data, style_function=style_lines).add_to(mymap)   
+    # style_lines = lambda x: {'color': '#fff', 'weight':'8'}
+    # folium.GeoJson(data, style_function=style_lines,control=False).add_to(mymap)  
+    style_lines = lambda x: {'color': '#0268ff', 'weight':'4'}
+    folium.GeoJson(data, style_function=style_lines,control=False).add_to(mymap)  
 
 # # JURA
 # # Open and load the GeoJSON file
@@ -402,21 +624,25 @@ with open("./ressources/pyrenees_est_railways.geojson", 'r') as railways_file:
 # Open and load the GeoJSON file
 with open("./ressources/vosges_railways.geojson", 'r') as railways_file:
     data = geojson.load(railways_file)
-    style_lines = lambda x: {'color': '#0268ff'}
-    folium.GeoJson(data, style_function=style_lines).add_to(mymap)  
+    # style_lines = lambda x: {'color': '#fff', 'weight':'8'}
+    # folium.GeoJson(data, style_function=style_lines,control=False).add_to(mymap)  
+    style_lines = lambda x: {'color': '#0268ff', 'weight':'4'}
+    folium.GeoJson(data, style_function=style_lines,control=False).add_to(mymap)  
+  
 
 # AUVERGNE
 # Open and load the GeoJSON file
 with open("./ressources/auvergne_railways.geojson", 'r') as railways_file:
     data = geojson.load(railways_file)
-    style_lines = lambda x: {'color': '#0268ff'}
-    folium.GeoJson(data, style_function=style_lines).add_to(mymap)  
-
-
+    # style_lines = lambda x: {'color': '#fff', 'weight':'8'}
+    # folium.GeoJson(data, style_function=style_lines,control=False).add_to(mymap)  
+    style_lines = lambda x: {'color': '#0268ff', 'weight':'4'}
+    folium.GeoJson(data, style_function=style_lines,control=False).add_to(mymap)  
+    
 # Add legend
 legend_html = '''
 <div style="position: fixed; 
-     top: 40px; right: 20px; width: 225px; height: 115px; 
+     bottom: 20px; right: 10px; width: 225px; height: 140px; 
      border:2px solid grey; z-index:9999; font-size:14px;
      background-color:white; opacity: 0.85;">
      &nbsp;<b>Légende :</b><br>
@@ -427,6 +653,7 @@ legend_html = '''
                 <path d="M12 11v10" />
               </svg>&nbsp;Destinations
             <br>
+     &nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="#fea8db" fill-opacity="1" stroke="none" stroke-width="0"/></svg>&nbsp;Arrêts de bus<br>
      &nbsp;<img src="./ressources/train-icon.png" width="24" height="24"/>&nbsp;Gares avec correspondances<br>
      &nbsp;<img style="filter: invert(34%) sepia(80%) saturate(5493%) hue-rotate(211deg) brightness(101%) contrast(102%);" src="./ressources/segment.svg" width="20"/>&nbsp;Lignes de train<br>
      &nbsp;<img style="filter: invert(16%) sepia(20%) saturate(5626%) hue-rotate(177deg) brightness(97%) contrast(102%);" src="./ressources/segment.svg" width="20"/>&nbsp;Lignes de bus<br>
@@ -434,6 +661,47 @@ legend_html = '''
 '''
 mymap.get_root().html.add_child(folium.Element(legend_html))
 
+
+### HIDE POINTS ON LOW ZOOM LEVELS
+
+map_name = mymap.get_name()
+points_name = points.get_name()
+
+
+script = f"""
+<script>
+
+document.addEventListener("DOMContentLoaded", function() {{
+
+    var mapObject = {map_name};
+    var pointsLayer = {points_name};
+
+    function togglePoints() {{
+
+        if (mapObject.getZoom() >= 12) {{
+
+            if (!mapObject.hasLayer(pointsLayer)) {{
+                mapObject.addLayer(pointsLayer);
+            }}
+
+        }} else {{
+
+            if (mapObject.hasLayer(pointsLayer)) {{
+                mapObject.removeLayer(pointsLayer);
+            }}
+        }}
+    }}
+
+    togglePoints();
+
+    mapObject.on('zoomend', togglePoints);
+
+}});
+
+</script>
+"""
+
+mymap.get_root().html.add_child(Element(script))
           
 # Add watermark
 url = ("./ressources/FR_Hero-Logo.png")
@@ -441,6 +709,9 @@ FloatImage(url, bottom=5, left=2, width='100px').add_to(mymap)
 
 # Add geosearch bar
 Geocoder(collapsed=True, add_marker=True, position="topleft").add_to(mymap)
+
+# Layers seletor
+folium.LayerControl().add_to(mymap)
 
 # Save the map to an HTML file
 output_map_file = "leaflet_map.html"
